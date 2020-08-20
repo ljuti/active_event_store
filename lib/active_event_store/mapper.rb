@@ -36,8 +36,8 @@ module ActiveEventStore
 
     def serialized_record_to_event(record)
       event_class = mapping.fetch(record.event_type) do
-        raise "Don't know how to deserialize event: \"#{record.event_type}\". " \
-              "Add explicit mapping: ActiveEventStore.mapper.register \"#{record.event_type}\", \"<Class Name>\""
+        raise ArgumentError.new("Don't know how to deserialize event: \"#{record.event_type}\". " \
+              "Add explicit mapping: ActiveEventStore.mapper.register \"#{record.event_type}\", \"<Class Name>\"")
       end
 
       Object.const_get(event_class).new(

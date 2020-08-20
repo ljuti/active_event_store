@@ -26,6 +26,24 @@ describe ActiveEventStore::Mapper do
       record = subject.event_to_serialized_record(event)
       expect(record.data).to eq({user_id: 1, action_type: "test"}.to_json)
     end
+
+    it "registers an event type if it isn't registered beforehand" do
+      expect(subject.send(:mapping).send(:data)).to be_empty
+
+      subject.event_to_serialized_record(event)
+
+      mapping = subject.send(:mapping).send(:data)
+
+      expect(mapping).not_to be_empty
+      expect(mapping).to have_key("test_event")
+      expect(mapping.fetch("test_event")).to eq event_class.to_s
+    end
+
+    # TODO: This belongs to mapping spec
+    it "should check if the mapping exists" do
+      expect(subject.send(:mapping)).to receive(:exist?).with("test_event").once
+      subject.event_to_serialized_record(event)
+    end
   end
 
   describe "#serialized_record_to_event" do
@@ -41,7 +59,10 @@ describe ActiveEventStore::Mapper do
       mapper = described_class.new(mapping: ActiveEventStore::Mapping.new)
 
       expect { mapper.serialized_record_to_event(record) }
-        .to raise_error(/don't know how to deserialize event: "test_event"/i)
+        .to raise_error(ArgumentError, /don't know how to deserialize event: "test_event"/i)
+
+      expect { mapper.serialized_record_to_event(record) }
+        .to raise_error(ArgumentError, /ActiveEventStore.mapper.register "test_event"/)
     end
 
     it "works if mapping is added explicitly" do
@@ -51,6 +72,27 @@ describe ActiveEventStore::Mapper do
 
       new_event = mapper.serialized_record_to_event(record)
       expect(new_event).to eq event
+    end
+
+    describe "Metadata" do
+      let(:event_with_metadata) { event_class.new(user_id: 1, action_type: "test", metadata: {timestamp: 321}) }
+      let(:event_without_metadata) { event_class.new(user_id: 1, action_type: "test") }
+
+      it "adds metadata if that's included" do
+        record = subject.event_to_serialized_record(event_with_metadata)
+        new_event = subject.serialized_record_to_event(record)
+
+        expect(new_event).to eq event_with_metadata
+        expect(new_event.metadata).not_to be_empty
+      end
+
+      it "doesn't add metadata if that's not included" do
+        record = subject.event_to_serialized_record(event_without_metadata)
+        new_event = subject.serialized_record_to_event(record)
+
+        expect(new_event).to eq event_without_metadata
+        expect(new_event.metadata).to be_empty
+      end
     end
   end
 end
