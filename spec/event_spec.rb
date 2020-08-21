@@ -97,4 +97,38 @@ describe ActiveEventStore::Event do
       ArgumentError, /metadata is reserved/
     )
   end
+
+  describe ".inspect" do
+    subject { event_class.new(user_id: 1).inspect }
+
+    it "returns a string representation of the event" do      
+      expect(subject).to be_a String
+      expect(subject).to match(/^ActiveEventStore::TestEvent<test_event#.{36}>, data: {:user_id=>1}, metadata: #<RubyEventStore::Metadata/)
+    end
+
+    it "returns a string representation of the event" do
+      event = event_class.new(user_id: 1)
+      expect(event_class).to receive(:name).once
+      expect(event.inspect).to be_a String
+    end
+  end
+
+  describe "#validate_attributes!" do
+    it "validates params" do
+      expect { event_class.new(users_ids: [1], foobar: "baz") }
+        .to raise_error(
+        ArgumentError, /Unknown event attributes: users_ids, foobar/
+      )
+    end
+  end
+
+  describe "#extract_sync_attributes!" do
+    it "extracts sync attributes" do
+      event = event_class.new(user_id: 1, user: { name: "John" })
+
+      expect(event).to respond_to(:user)
+      expect(event.user).to be_a Hash
+      expect(event.user).to have_key(:name)
+    end
+  end
 end

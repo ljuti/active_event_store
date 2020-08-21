@@ -96,3 +96,101 @@ describe ActiveEventStore::Mapper do
     end
   end
 end
+
+RSpec.describe ActiveEventStore::Mapping do
+  describe "#exist?" do
+    let(:empty_mapping) { described_class.new }
+
+    context "No mapping" do
+      it "checks if mapping exists" do
+        expect(empty_mapping.send(:data)).to receive(:key?).with("test_event").once
+        empty_mapping.exist?("test_event")
+      end
+
+      it "" do
+        expect(empty_mapping.exist?("test_event")).to be false
+      end
+    end
+
+    context "Mapping exists" do
+      it "" do
+        mapping = described_class.new
+        expect(mapping.register("test_event", "ActiveEventStore::TestEvent")).to eql("ActiveEventStore::TestEvent")
+        expect(mapping.exist?("test_event")).to be true
+      end
+    end
+  end
+
+  describe "#register(type, class_name)" do
+    it "registers a mapping for an event" do
+      mapping = described_class.new
+      expect(mapping.register("test_event", "ActiveEventStore::TestEvent")).to be_truthy
+
+      expect(mapping.exist?("test_event")).to be true
+      expect(mapping.fetch("test_event")).to eq "ActiveEventStore::TestEvent"
+
+      expect(mapping.send(:data)).to have_key("test_event")
+    end
+
+    it "does not raise errors on valid inupt" do
+      mapping = described_class.new
+      expect { mapping.register("test_event", "ActiveEventStore::TestEvent") }
+        .not_to raise_error
+    end
+
+    it "fails to register if no event provided" do
+      mapping = described_class.new
+      expect { mapping.register("test_event", nil) }
+        .to raise_error(ArgumentError, /a defined ActiveEventStore::Event/)
+    end
+
+    it "fails to register if an event type is not provided" do
+      mapping = described_class.new
+      expect { mapping.register(nil, "ActiveEventStore::Event") }
+        .to raise_error(ArgumentError, /an event type/)
+    end
+  end
+
+  describe "#register_event(event_class)" do
+    let(:event_class) { ActiveEventStore::TestEvent }
+    
+    it "registers an event and a subscriber" do
+      mapping = described_class.new
+      expect(mapping.register_event(event_class)).to be_truthy
+    end
+
+    it "uses event class properties to register" do
+      mapping = described_class.new
+      expect(mapping).to receive(:register).with("test_event", "ActiveEventStore::TestEvent")
+      mapping.register_event(event_class)
+    end
+
+    it "does not raise errors when event class has required properties" do
+      mapping = described_class.new
+      expect { mapping.register_event(event_class) }
+        .not_to raise_error
+    end
+
+    it "raises errors when the event class is something else" do
+      klass = double(identifier: "foo", name: nil)
+      mapping = described_class.new
+      expect { mapping.register_event(klass) }
+        .to raise_error(ArgumentError)
+    end
+
+    it "gets properties from event class for registration" do
+      klass = double(ActiveEventStore::Event, identifier: "foo", name: "ActiveEventStore::Event")
+      expect(klass).to receive(:identifier)
+      expect(klass).to receive(:name)
+
+      mapping = described_class.new
+      expect(mapping).to receive(:register).with("foo", "ActiveEventStore::Event")
+      mapping.register_event(klass)
+    end
+
+    it "returns the mapping when registering the mapping" do
+      mapping = described_class.new
+      expect(mapping.register_event(ActiveEventStore::TestEvent)).to eq "ActiveEventStore::TestEvent"
+    end
+  end
+end

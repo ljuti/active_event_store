@@ -9,6 +9,8 @@ module ActiveEventStore
     end
 
     def register(type, class_name)
+      raise ArgumentError.new("You must provide an event type as a string") unless type.is_a?(String)
+      raise ArgumentError.new("You must provide a defined ActiveEventStore::Event class") unless !!class_name && Object.const_defined?(class_name)
       data[type] = class_name
     end
 

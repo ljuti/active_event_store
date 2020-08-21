@@ -108,10 +108,10 @@ module ActiveEventStore
     end
 
     def extract_sync_attributes!(params)
-      params.keys.each do |key|
-        next unless self.class.defined_sync_attributes.include?(key.to_sym)
-
-        instance_variable_set(:"@#{key}", params.delete(key))
+      self.class.defined_sync_attributes.each do |attr|
+        if params.include?(attr)
+          instance_variable_set(:"@#{attr}", params.delete(attr))
+        end
       end
     end
   end
