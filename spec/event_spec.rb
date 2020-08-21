@@ -131,4 +131,30 @@ describe ActiveEventStore::Event do
       expect(event.user).to have_key(:name)
     end
   end
+
+  describe "#initialize" do
+    it "initializes" do
+      expect(event_class.new(user_id: 1)).to be_instance_of event_class
+    end
+
+    it "performs correct initialization steps" do
+      event = event_class.allocate
+
+      expect(event).to receive(:validate_attributes!)
+      expect(event).to receive(:extract_sync_attributes!)
+
+      event.send(:initialize)
+    end
+
+    it "must be given a metadata hash if metadata provided" do
+      expect { event_class.new(metadata: nil, user_id: 1) }
+        .to raise_error(ArgumentError, /Any custom metadata must be provided as a hash./)
+    end
+
+    it "can initialize with custom event ID" do
+      event = event_class.new(event_id: 123, user_id: 1)
+      expect(event).to be_instance_of event_class
+      expect(event.event_id).to eq "123"
+    end
+  end
 end

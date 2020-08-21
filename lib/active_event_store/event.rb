@@ -63,6 +63,7 @@ module ActiveEventStore
     end
 
     def initialize(metadata: {}, event_id: nil, **params)
+      raise ArgumentError.new("Any custom metadata must be provided as a hash.") unless metadata.instance_of?(Hash)
       validate_attributes!(params)
       extract_sync_attributes!(params)
       super(**{event_id: event_id, metadata: metadata, data: params}.compact)
